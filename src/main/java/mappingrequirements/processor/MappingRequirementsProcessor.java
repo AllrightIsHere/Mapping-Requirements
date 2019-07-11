@@ -1,13 +1,11 @@
 package mappingrequirements.processor;
 
+import com.google.auto.service.AutoService;
 import mappingrequirements.annotation.CustomMethodAnnotation;
 import mappingrequirements.annotation.CustomTypeAnnotation;
 import mappingrequirements.annotation.CustomVariableAnnotation;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Messager;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -17,6 +15,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+@AutoService(Processor.class)
 public class MappingRequirementsProcessor extends AbstractProcessor {
 
     private Messager messager;
