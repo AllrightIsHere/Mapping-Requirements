@@ -15,6 +15,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
@@ -27,9 +28,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -39,12 +40,15 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
     private Messager messager;
     private Elements elements;
     private Gson gson;
+    private List<Element> customTypeElements;
     private List<CustomType> customTypes;
 
     @Override public synchronized void init(ProcessingEnvironment processingEnvironment) {
         super.init(processingEnvironment);
 
-        this.customTypes = new LinkedList<>();
+        this.customTypeElements = new ArrayList<>();
+
+        this.customTypes = new ArrayList<>();
 
         this.filer = processingEnvironment.getFiler();
 
@@ -59,8 +63,8 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
     }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
-        Set<Class<? extends Annotation>> annotations = supportedAnnotations();
-        Set<String> names = new LinkedHashSet<>();
+        final Set<Class<? extends Annotation>> annotations = supportedAnnotations();
+        final Set<String> names = new LinkedHashSet<>();
 
         for(Class<? extends Annotation> annotation : annotations) {
             names.add(annotation.getCanonicalName());
@@ -77,10 +81,6 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
         findAndParseElementsAnnotatedWithCustomTypeAnnotation(roundEnvironment, customTypes);
 
-        messager.printMessage(Diagnostic.Kind.NOTE, "running round...");
-
-        messager.printMessage(Diagnostic.Kind.NOTE, "customTypes.isEmpty() = " + customTypes.isEmpty());
-
         if(!customTypes.isEmpty() && !roundEnvironment.errorRaised() && !roundEnvironment.processingOver()) {
             writeElements();
         }
@@ -93,14 +93,16 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
     private void findAndParseElementsAnnotatedWithCustomTypeAnnotation(RoundEnvironment roundEnvironment, List<CustomType> customTypes) {
         for(Element element : roundEnvironment.getElementsAnnotatedWith(CustomTypeAnnotation.class)) {
-            String name = element.getSimpleName().toString();
-            PackageElement packageElement = elements.getPackageOf(element);
-            String packageName = packageElement.isUnnamed() ? "" : packageElement.toString();
+            customTypeElements.add(element);
+            final String name = element.getSimpleName().toString();
+            final PackageElement packageElement = elements.getPackageOf(element);
+            final String packageName = packageElement.isUnnamed() ? "" : packageElement.toString();
             CustomTypeAnnotation annotation = element.getAnnotation(CustomTypeAnnotation.class);
 
-            CustomType customType = new CustomType(
+            final CustomType customType = new CustomType(
                     name,
                     packageName,
+                    getModifiers(element),
                     annotation.priority(),
                     annotation.createdBy(),
                     annotation.lastModified(),
@@ -111,22 +113,32 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
         }
     }
 
+    private static List<String> getModifiers(Element element) {
+        final List<String> modifiers = new ArrayList<>();
+
+        for(Modifier modifier : element.getModifiers()) {
+            modifiers.add(modifier.name().toLowerCase());
+        }
+
+        return modifiers;
+    }
+
     private void writeElements() {
         try {
             FileObject fileObject = filer.createResource(StandardLocation.SOURCE_OUTPUT, "", "output.json");
 
             try (OutputStream outputStream = fileObject.openOutputStream()) {
-                String json = gson.toJson(customTypes);
-
-                messager.printMessage(Diagnostic.Kind.NOTE, json);
 
                 PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+
+                String json = gson.toJson(customTypes);
 
                 writer.write(json);
 
                 writer.flush();
 
                 writer.close();
+
             }
         } catch (IOException ex) {
             messager.printMessage(Diagnostic.Kind.ERROR, "Failed to write to output.json: " + ex.toString());
