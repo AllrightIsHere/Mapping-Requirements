@@ -21,8 +21,12 @@ Após isso, basta compilar suas classes adicionando o ```.jar``` ao classpath. E
 package com.example;
 
 import mappingrequirements.annotation.CustomTypeAnnotation;
+import mappingrequirements.annotation.CustomVariableAnnotation;
 
 @CustomTypeAnnotation public class Main {
+
+    @CustomVariableAnnotation
+    private String name;
 
     public static void main(String[] args) {
         System.out.println("Hello!");
@@ -51,7 +55,16 @@ Isso deverá produzir um arquivo ```output.json``` com o seguinte resultado:
     "tags": [
       ""
     ],
-    "variables": [],
+    "variables": [
+      {
+        "name": "name",
+        "type": "java.lang.String",
+        "description": "",
+        "modifiers": [
+          "private"
+        ]
+      }
+    ],
     "methods": []
   }
 ]
