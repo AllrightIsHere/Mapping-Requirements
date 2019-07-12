@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface CustomTypeAnnotation {
 
-    public enum Priority{
+    enum Priority{
         LOW, MEDIUM, HIGH
     }
 
@@ -19,7 +19,7 @@ public @interface CustomTypeAnnotation {
 
     String[] tags() default "";
 
-    String createBy() default "Gabriel";
+    String createdBy() default "Gabriel";
 
     String lastModified() default "02/05/2019";
 
