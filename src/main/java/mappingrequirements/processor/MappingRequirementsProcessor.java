@@ -1,47 +1,34 @@
 package mappingrequirements.processor;
 
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import mappingrequirements.annotation.CustomMethodAnnotation;
 import mappingrequirements.annotation.CustomTypeAnnotation;
 import mappingrequirements.annotation.CustomVariableAnnotation;
 import mappingrequirements.model.CustomType;
 
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Filer;
-import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
-import javax.tools.Diagnostic;
-import javax.tools.FileObject;
 import javax.tools.StandardLocation;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import static mappingrequirements.processor.Utils.getModifiers;
+
 public class MappingRequirementsProcessor extends AbstractProcessor {
 
-    private Filer filer;
-    private Messager messager;
     private Elements elements;
-    private Gson gson;
     private List<Element> customTypeElements;
     private List<CustomType> customTypes;
+    private JsonResourceWriter writer;
 
     @Override public synchronized void init(ProcessingEnvironment processingEnvironment) {
         super.init(processingEnvironment);
@@ -50,16 +37,9 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
         this.customTypes = new ArrayList<>();
 
-        this.filer = processingEnvironment.getFiler();
-
-        this.messager = processingEnvironment.getMessager();
-
         this.elements = processingEnvironment.getElementUtils();
 
-        this.gson = new GsonBuilder()
-                .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                .setPrettyPrinting()
-                .create();
+        writer = new JsonResourceWriter(processingEnvironment);
     }
 
     @Override public Set<String> getSupportedAnnotationTypes() {
@@ -82,7 +62,7 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
         findAndParseElementsAnnotatedWithCustomTypeAnnotation(roundEnvironment, customTypes);
 
         if(!customTypes.isEmpty() && !roundEnvironment.errorRaised() && !roundEnvironment.processingOver()) {
-            writeElements();
+            writer.write(StandardLocation.SOURCE_OUTPUT, "output.json", customTypes);
         }
 
         cleanup();
@@ -99,7 +79,7 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
             final String packageName = packageElement.isUnnamed() ? "" : packageElement.toString();
             CustomTypeAnnotation annotation = element.getAnnotation(CustomTypeAnnotation.class);
 
-            final CustomType customType = new CustomType(
+            customTypes.add(new CustomType(
                     name,
                     packageName,
                     getModifiers(element),
@@ -107,41 +87,7 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
                     annotation.createdBy(),
                     annotation.lastModified(),
                     Arrays.asList(annotation.tags())
-            );
-
-            customTypes.add(customType);
-        }
-    }
-
-    private static List<String> getModifiers(Element element) {
-        final List<String> modifiers = new ArrayList<>();
-
-        for(Modifier modifier : element.getModifiers()) {
-            modifiers.add(modifier.name().toLowerCase());
-        }
-
-        return modifiers;
-    }
-
-    private void writeElements() {
-        try {
-            FileObject fileObject = filer.createResource(StandardLocation.SOURCE_OUTPUT, "", "output.json");
-
-            try (OutputStream outputStream = fileObject.openOutputStream()) {
-
-                PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
-
-                String json = gson.toJson(customTypes);
-
-                writer.write(json);
-
-                writer.flush();
-
-                writer.close();
-
-            }
-        } catch (IOException ex) {
-            messager.printMessage(Diagnostic.Kind.ERROR, "Failed to write to output.json: " + ex.toString());
+            ));
         }
     }
 
