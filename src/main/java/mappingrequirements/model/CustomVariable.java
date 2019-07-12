@@ -1,6 +1,5 @@
 package mappingrequirements.model;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class CustomVariable {
@@ -10,10 +9,10 @@ public class CustomVariable {
     public final String description;
     public final List<String> modifiers;
 
-    public CustomVariable(String name, String type, String description) {
+    public CustomVariable(String name, String type, String description, List<String> modifiers) {
         this.name = name;
         this.type = type;
         this.description = description;
-        this.modifiers = new ArrayList<>();
+        this.modifiers = modifiers;
     }
 }

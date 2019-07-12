@@ -4,6 +4,7 @@ import mappingrequirements.annotation.CustomMethodAnnotation;
 import mappingrequirements.annotation.CustomTypeAnnotation;
 import mappingrequirements.annotation.CustomVariableAnnotation;
 import mappingrequirements.model.CustomType;
+import mappingrequirements.model.CustomVariable;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -59,7 +60,9 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
     @Override public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
 
-        findAndParseElementsAnnotatedWithCustomTypeAnnotation(roundEnvironment, customTypes);
+        findAndParseElementsAnnotatedWithCustomTypeAnnotation(roundEnvironment);
+
+        findAndParseElementsAnnotatedWithCustomVariableAnnotation(roundEnvironment);
 
         if(!customTypes.isEmpty() && !roundEnvironment.errorRaised() && !roundEnvironment.processingOver()) {
             writer.write(StandardLocation.SOURCE_OUTPUT, "output.json", customTypes);
@@ -71,7 +74,7 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
     }
 
-    private void findAndParseElementsAnnotatedWithCustomTypeAnnotation(RoundEnvironment roundEnvironment, List<CustomType> customTypes) {
+    private void findAndParseElementsAnnotatedWithCustomTypeAnnotation(RoundEnvironment roundEnvironment) {
         for(Element element : roundEnvironment.getElementsAnnotatedWith(CustomTypeAnnotation.class)) {
             customTypeElements.add(element);
             final String name = element.getSimpleName().toString();
@@ -89,6 +92,29 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
                     Arrays.asList(annotation.tags())
             ));
         }
+    }
+
+    private void findAndParseElementsAnnotatedWithCustomVariableAnnotation(RoundEnvironment roundEnvironment) {
+        for(Element element : roundEnvironment.getElementsAnnotatedWith(CustomVariableAnnotation.class)) {
+            Element rootElement = element.getEnclosingElement();
+
+            int rootElementIndex = customTypeElements.indexOf(rootElement);
+
+            if(rootElementIndex != -1) {
+                customTypes.get(rootElementIndex).variables.add(
+                        parseElementsAnnotatedWithCustomVariableAnnotation(element)
+                );
+            }
+        }
+    }
+
+    private static CustomVariable parseElementsAnnotatedWithCustomVariableAnnotation(Element element) {
+        return new CustomVariable(
+                element.getSimpleName().toString(),
+                element.asType().toString(),
+                element.getAnnotation(CustomVariableAnnotation.class).description(),
+                getModifiers(element)
+        );
     }
 
     private void cleanup() {
