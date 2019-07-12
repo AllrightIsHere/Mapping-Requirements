@@ -11,6 +11,16 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface CustomMethodAnnotation {
 
-    public boolean enabled() default true;
+    enum Priority{
+        LOW, MEDIUM, HIGH
+    }
+
+    Priority priority() default Priority.MEDIUM;
+
+    String[] tags() default "";
+
+    String createdBy() default "Gabriel";
+
+    String lastModified() default "02/05/2019";
 
 }
