@@ -22,17 +22,20 @@ package com.example;
 
 import mappingrequirements.annotation.CustomTypeAnnotation;
 import mappingrequirements.annotation.CustomVariableAnnotation;
+import mappingrequirements.annotation.CustomMethodAnnotation;
 
 @CustomTypeAnnotation public class Main {
 
     @CustomVariableAnnotation
     private String name;
 
+    @CustomMethodAnnotation
     public static void main(String[] args) {
         System.out.println("Hello!");
     }
 
 }
+
 ```
 
 Execute o comando para compilar a classe adicionando o ```.jar``` ao ```classpath```:
@@ -65,7 +68,28 @@ Isso deverá produzir um arquivo ```output.json``` com o seguinte resultado:
         ]
       }
     ],
-    "methods": []
+    "methods": [
+      {
+        "priority": "MEDIUM",
+        "created_by": "Gabriel",
+        "last_modified": "02/05/2019",
+        "tags": [
+          ""
+        ],
+        "name": "main",
+        "modifiers": [
+          "public",
+          "static"
+        ],
+        "return_type": "void",
+        "parameters": [
+          {
+            "name": "args",
+            "type": "java.lang.String[]"
+          }
+        ]
+      }
+    ]
   }
 ]
 ```
