@@ -3,6 +3,7 @@ package mappingrequirements.processor;
 import mappingrequirements.annotation.CustomMethodAnnotation;
 import mappingrequirements.annotation.CustomTypeAnnotation;
 import mappingrequirements.annotation.CustomVariableAnnotation;
+import mappingrequirements.model.CustomMethod;
 import mappingrequirements.model.CustomType;
 import mappingrequirements.model.CustomVariable;
 
@@ -11,6 +12,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
@@ -22,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import static mappingrequirements.processor.Utils.assembleParameters;
 import static mappingrequirements.processor.Utils.getModifiers;
 
 public class MappingRequirementsProcessor extends AbstractProcessor {
@@ -60,9 +63,11 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
     @Override public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
 
-        findAndParseElementsAnnotatedWithCustomTypeAnnotation(roundEnvironment);
+        findAndAssembleTypes(roundEnvironment);
 
-        findAndParseElementsAnnotatedWithCustomVariableAnnotation(roundEnvironment);
+        findAndAssembleVariables(roundEnvironment);
+
+        findAndAssembleMethods(roundEnvironment);
 
         if(!customTypes.isEmpty() && !roundEnvironment.errorRaised() && !roundEnvironment.processingOver()) {
             writer.write(StandardLocation.SOURCE_OUTPUT, "output.json", customTypes);
@@ -74,7 +79,7 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
     }
 
-    private void findAndParseElementsAnnotatedWithCustomTypeAnnotation(RoundEnvironment roundEnvironment) {
+    private void findAndAssembleTypes(RoundEnvironment roundEnvironment) {
         for(Element element : roundEnvironment.getElementsAnnotatedWith(CustomTypeAnnotation.class)) {
             customTypeElements.add(element);
             final String name = element.getSimpleName().toString();
@@ -94,7 +99,7 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
         }
     }
 
-    private void findAndParseElementsAnnotatedWithCustomVariableAnnotation(RoundEnvironment roundEnvironment) {
+    private void findAndAssembleVariables(RoundEnvironment roundEnvironment) {
         for(Element element : roundEnvironment.getElementsAnnotatedWith(CustomVariableAnnotation.class)) {
             Element rootElement = element.getEnclosingElement();
 
@@ -102,18 +107,48 @@ public class MappingRequirementsProcessor extends AbstractProcessor {
 
             if(rootElementIndex != -1) {
                 customTypes.get(rootElementIndex).variables.add(
-                        parseElementsAnnotatedWithCustomVariableAnnotation(element)
+                        assembleVariable(element)
                 );
             }
         }
     }
 
-    private static CustomVariable parseElementsAnnotatedWithCustomVariableAnnotation(Element element) {
+    private static CustomVariable assembleVariable(Element element) {
         return new CustomVariable(
                 element.getSimpleName().toString(),
                 element.asType().toString(),
                 element.getAnnotation(CustomVariableAnnotation.class).description(),
                 getModifiers(element)
+        );
+    }
+
+    private void findAndAssembleMethods(RoundEnvironment roundEnvironment) {
+        for(Element element : roundEnvironment.getElementsAnnotatedWith(CustomMethodAnnotation.class)) {
+            Element rootElement = element.getEnclosingElement();
+
+            int rootElementIndex = customTypeElements.indexOf(rootElement);
+
+            if(rootElementIndex != -1) {
+                customTypes.get(rootElementIndex).methods.add(
+                        assembleMethod(element)
+                );
+            }
+        }
+    }
+
+    private static CustomMethod assembleMethod(Element element) {
+        ExecutableElement executableElement = (ExecutableElement) element;
+        CustomMethodAnnotation annotation = element.getAnnotation(CustomMethodAnnotation.class);
+
+        return new CustomMethod(
+                annotation.priority(),
+                annotation.createdBy(),
+                annotation.lastModified(),
+                Arrays.asList(annotation.tags()),
+                element.getSimpleName().toString(),
+                getModifiers(element),
+                assembleParameters(executableElement),
+                executableElement.getReturnType().toString()
         );
     }
 

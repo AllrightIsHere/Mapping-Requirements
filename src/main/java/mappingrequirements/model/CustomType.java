@@ -1,6 +1,6 @@
 package mappingrequirements.model;
 
-import mappingrequirements.annotation.CustomTypeAnnotation.Priority;
+import mappingrequirements.annotation.Priority;
 
 import java.util.ArrayList;
 import java.util.List;

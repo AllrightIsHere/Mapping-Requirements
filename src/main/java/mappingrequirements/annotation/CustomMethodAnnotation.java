@@ -11,10 +11,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface CustomMethodAnnotation {
 
-    enum Priority{
-        LOW, MEDIUM, HIGH
-    }
-
     Priority priority() default Priority.MEDIUM;
 
     String[] tags() default "";
